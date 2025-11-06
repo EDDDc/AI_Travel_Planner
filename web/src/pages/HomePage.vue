@@ -3,45 +3,45 @@
     <el-card class="hero" shadow="hover" body-style="padding: 18px 18px">
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
         <div>
-          <h2 style="margin:0 0 6px">Generate Your Trip</h2>
-          <div class="muted">Enter destination, dates, people and budget.</div>
+          <h2 style="margin:0 0 6px">快速生成你的行程</h2>
+          <div class="muted">输入目的地、日期、人数与预算，生成行程。</div>
         </div>
         <div class="section-actions">
-          <el-button type="primary" @click="generateItinerary" :loading="genLoading">Generate</el-button>
+          <el-button type="primary" @click="generateItinerary" :loading="genLoading">生成</el-button>
         </div>
       </div>
     </el-card>
 
     <el-card class="card" shadow="hover">
       <template #header>
-        <div class="card-header">Parameters</div>
+        <div class="card-header">行程参数</div>
       </template>
       <el-form label-width="90">
         <el-row :gutter="12">
-          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="Destination"><el-input v-model="gen.destination" placeholder="e.g. Nanjing" /></el-form-item></el-col>
-          <el-col :xs="24" :sm="12" :md="8"><el-form-item label="Dates">
-            <el-date-picker v-model="dateRange" type="daterange" range-separator="to" start-placeholder="Start" end-placeholder="End" style="width: 100%" @change="onDateChange" />
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="目的地"><el-input v-model="gen.destination" placeholder="例如 南京" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="8"><el-form-item label="日期">
+            <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 100%" @change="onDateChange" />
           </el-form-item></el-col>
-          <el-col :xs="24" :sm="12" :md="4"><el-form-item label="Days"><el-input-number v-model="gen.days" :min="1" /></el-form-item></el-col>
-          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="People"><el-input-number v-model="gen.people" :min="1" /></el-form-item></el-col>
-          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="Budget"><el-input-number v-model="gen.budget" :min="0" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="4"><el-form-item label="天数"><el-input-number v-model="gen.days" :min="1" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="人数"><el-input-number v-model="gen.people" :min="1" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="预算"><el-input-number v-model="gen.budget" :min="0" /></el-form-item></el-col>
         </el-row>
-        <el-button type="primary" @click="generateItinerary" :loading="genLoading">Generate</el-button>
+        <el-button type="primary" @click="generateItinerary" :loading="genLoading">生成行程</el-button>
       </el-form>
     </el-card>
 
     <el-row :gutter="16" style="margin-top:12px">
       <el-col :xs="24" :md="14">
         <el-card shadow="hover">
-          <template #header><div class="card-header">Result</div></template>
-          <div v-if="!generated" class="small muted">No data yet</div>
+          <template #header><div class="card-header">生成结果</div></template>
+          <div v-if="!generated" class="small muted">尚未生成</div>
           <div v-else>
             <div class="summary">
-              {{ generated.destination }} · {{ generated.days }} days · {{ generated.itineraryId }}
-              <el-tag size="small" type="info" style="margin-left:8px">source: {{ aiSource }}</el-tag>
+              目的地：{{ generated.destination }}｜天数：{{ generated.days }}｜方案ID：{{ generated.itineraryId }}
+              <el-tag size="small" type="info" style="margin-left:8px">来源：{{ aiSource }}</el-tag>
             </div>
-            <el-button type="success" :disabled="!canSave" @click="saveItinerary">Save</el-button>
-            <el-switch v-model="showRaw" active-text="Show raw JSON" style="margin-left:12px" />
+            <el-button type="success" :disabled="!canSave" @click="saveItinerary">保存到云端</el-button>
+            <el-switch v-model="showRaw" active-text="查看原始JSON" style="margin-left:12px" />
             <span class="small" style="margin-left:8px">{{ saveMsg }}</span>
             <div v-if="showRaw"><pre style="margin-top:8px">{{ JSON.stringify(generated, null, 2) }}</pre></div>
             <ItineraryView :itinerary="generated" />
@@ -50,7 +50,7 @@
         <el-card shadow="hover" style="margin-top:12px">
           <template #header>
             <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <span>Map Preview</span>
+              <span>地图预览</span>
               <div v-if="generated?.dayPlans?.length">
                 <el-select v-model="selectedDayIndex" size="small" style="width:160px" @change="(i:number)=>buildMapPointsFromDayIndex(i)">
                   <el-option v-for="(d,i) in generated.dayPlans" :key="i" :label="(d.date ? d.date : ('D' + (i+1)))" :value="i" />
@@ -58,40 +58,40 @@
               </div>
             </div>
           </template>
-          <div v-if="mapPoints.length === 0" class="small muted">No points to show</div>
+          <div v-if="mapPoints.length === 0" class="small muted">暂无可渲染的地点</div>
           <MapView v-else :points="mapPoints" />
         </el-card>
       </el-col>
       <el-col :xs="24" :md="10">
         <el-card shadow="hover">
-          <template #header><div class="card-header">My Itineraries</div></template>
-          <div v-if="!supabaseReady">Configure Supabase to list</div>
-          <div v-else-if="!userEmail">Login to view</div>
+          <template #header><div class="card-header">我的行程</div></template>
+          <div v-if="!supabaseReady">需配置 Supabase 才能列出</div>
+          <div v-else-if="!userEmail">需登录后查看</div>
           <el-table v-else :data="myItineraries" size="small" style="width:100%">
-            <el-table-column label="Title" :min-width="200" v-slot="scope">
+            <el-table-column label="标题" :min-width="200" v-slot="scope">
               <div><strong>{{ scope.row.title || (scope.row.destination + ' · ' + (scope.row.days || '')) }}</strong></div>
               <div class="small muted">{{ scope.row.destination }}</div>
             </el-table-column>
-            <el-table-column label="Op" width="120" v-slot="scope">
-              <el-button link type="danger" @click="removeItinerary(scope.row.id)">Delete</el-button>
+            <el-table-column label="操作" width="120" v-slot="scope">
+              <el-button link type="danger" @click="removeItinerary(scope.row.id)">删除</el-button>
             </el-table-column>
           </el-table>
-          <div style="margin-top:8px"><el-button v-if="supabaseReady && userEmail" size="small" @click="loadItineraries">Refresh</el-button></div>
+          <div style="margin-top:8px"><el-button v-if="supabaseReady && userEmail" size="small" @click="loadItineraries">刷新</el-button></div>
         </el-card>
 
         <el-card shadow="hover" style="margin-top:12px">
-          <template #header><div class="card-header">Budget Entry</div></template>
-          <div v-if="!(supabaseReady && userEmail)" class="small muted">Login to use</div>
+          <template #header><div class="card-header">记一笔预算</div></template>
+          <div v-if="!(supabaseReady && userEmail)" class="small muted">登录后使用</div>
           <div v-else class="grid">
-            <el-select v-model="selectedItineraryId" placeholder="Select itinerary" @change="loadBudgetSummary(selectedItineraryId)">
+            <el-select v-model="selectedItineraryId" placeholder="选择行程" @change="loadBudgetSummary(selectedItineraryId)">
               <el-option v-for="it in myItineraries" :key="it.id" :label="it.title || it.destination" :value="it.id" />
             </el-select>
             <el-input-number v-model="beAmount" :min="0" />
-            <el-input v-model="beCategory" placeholder="category (e.g. food)" />
-            <el-input v-model="beNote" placeholder="note (optional)" />
-            <el-button type="primary" @click="addBudgetEntry">Add</el-button>
+            <el-input v-model="beCategory" placeholder="类别(如 food)" />
+            <el-input v-model="beNote" placeholder="备注(可选)" />
+            <el-button type="primary" @click="addBudgetEntry">新增</el-button>
             <div class="small">{{ budgetMsg }}</div>
-            <div v-if="budgetSummary" class="small">{{ budgetSummary.count }} items, total {{ budgetSummary.total }}</div>
+            <div v-if="budgetSummary" class="small">{{ budgetSummary.count }} 笔，共计 {{ budgetSummary.total }}</div>
           </div>
         </el-card>
       </el-col>
@@ -163,7 +163,7 @@ async function generateItinerary() {
     selectedDayIndex.value = 0;
     await buildMapPointsFromDayIndex(0);
   } catch (e) {
-    saveMsg.value = 'Generate failed';
+    saveMsg.value = '生成失败';
   } finally {
     genLoading.value = false;
   }
@@ -197,10 +197,10 @@ async function buildMapPointsFromDayIndex(i: number) {
 
 async function saveItinerary() {
   if (!canSave.value) return;
-  saveMsg.value = 'Saving...';
+  saveMsg.value = '保存中...';
   const user = (await supabase.auth.getUser()).data.user;
-  if (!user) { saveMsg.value = 'Not logged in'; return; }
-  const title = `${generated.value.destination} · ${generated.value.days} days`;
+  if (!user) { saveMsg.value = '未登录'; return; }
+  const title = `${generated.value.destination}·${generated.value.days}天行程`;
   const insertData: any = {
     user_id: user.id,
     title,
@@ -210,8 +210,8 @@ async function saveItinerary() {
     preferences_json: { preferences: ['food', 'kids'] },
   };
   const { error } = await supabase.from('itineraries').insert(insertData).select().single();
-  if (error) { saveMsg.value = 'Save failed: ' + error.message; return; }
-  saveMsg.value = 'Saved';
+  if (error) { saveMsg.value = '保存失败：' + error.message; return; }
+  saveMsg.value = '保存成功';
   await loadItineraries();
 }
 
@@ -230,7 +230,7 @@ async function removeItinerary(id: string) {
 async function addBudgetEntry() {
   budgetMsg.value = '';
   if (!supabaseReady || !selectedItineraryId.value || !beAmount.value) {
-    budgetMsg.value = 'Select itinerary and amount';
+    budgetMsg.value = '请选择行程并填写金额';
     return;
   }
   const { error } = await supabase.from('budget_entries').insert({
@@ -241,7 +241,7 @@ async function addBudgetEntry() {
     note: beNote.value,
     source: 'manual',
   });
-  budgetMsg.value = error ? ('Add failed: ' + error.message) : 'Added';
+  budgetMsg.value = error ? ('新增失败：' + error.message) : '新增成功';
   if (!error) {
     beAmount.value = null;
     beNote.value = '';
@@ -282,4 +282,3 @@ function fmtDate(d: Date): string {
 <style scoped>
 .itinerary { margin-top: 8px; }
 </style>
-
