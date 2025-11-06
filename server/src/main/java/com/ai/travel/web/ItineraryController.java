@@ -48,7 +48,8 @@ public class ItineraryController {
         d1.setDate("Day 1");
         List<Activity> a1 = new ArrayList<>();
         a1.add(activity("transport", "抵达 " + req.getDestination() + " 机场/车站", null, null, "09:00", "10:00", 0, "建议购买当地交通卡"));
-        a1.add(activity("sight", req.getDestination() + " 市中心地标", 35.0, 135.0, "10:30", "12:00", 100, "拍照与简餐"));
+        // 去掉硬编码的经纬度，交给前端基于名称检索或后端代理检索补全
+        a1.add(activity("sight", req.getDestination() + " 市中心地标", null, null, "10:30", "12:00", 100, "拍照与简餐"));
         a1.add(activity("food", "本地特色餐厅", null, null, "12:15", "13:30", 120, "人均参考"));
         a1.add(activity("sight", "亲子友好景点", null, null, "14:30", "17:00", 200, "室内外均可"));
         d1.setActivities(a1);
