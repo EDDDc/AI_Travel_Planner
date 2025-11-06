@@ -31,12 +31,11 @@ async function initMap() {
     if (amapJsCode) {
       (window as any)._AMapSecurityConfig = { securityJsCode: amapJsCode };
     }
-    const AMap = await AMapLoader.load({
+    const AMap = await (AMapLoader as any).load({
       key: amapKey,
       version: '2.0',
       plugins: ['AMap.ToolBar', 'AMap.Scale'],
-      // 兼容 loader 新版参数（有些版本也从这里读取）
-      securityJsCode: amapJsCode
+      // 安全码通过 window._AMapSecurityConfig 注入
     });
     map = new AMap.Map(mapEl.value, { zoom: 11 });
     map.addControl(new AMap.ToolBar());

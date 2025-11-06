@@ -4,7 +4,7 @@
       <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
         <div>
           <h2 style="margin:0 0 6px">快速生成你的专属行程</h2>
-          <div class="muted">输入目的地与天数，马上得到可执行方案。</div>
+          <div class="muted">输入目的地、日期、人数与预算，马上得到可执行方案。</div>
         </div>
         <div class="section-actions">
           <el-button type="primary" @click="generateItinerary" :loading="genLoading">一键生成</el-button>
@@ -18,8 +18,11 @@
       </template>
       <el-form label-width="80">
         <el-row :gutter="12">
-          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="目的地"><el-input v-model="gen.destination" placeholder="如 东京" /></el-form-item></el-col>
-          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="天数"><el-input-number v-model="gen.days" :min="1" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="目的地"><el-input v-model="gen.destination" placeholder="如 南京" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="8"><el-form-item label="日期">
+            <el-date-picker v-model="dateRange" type="daterange" range-separator="至" start-placeholder="开始日期" end-placeholder="结束日期" style="width: 100%" @change="onDateChange" />
+          </el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="4"><el-form-item label="天数"><el-input-number v-model="gen.days" :min="1" /></el-form-item></el-col>
           <el-col :xs="24" :sm="12" :md="6"><el-form-item label="人数"><el-input-number v-model="gen.people" :min="1" /></el-form-item></el-col>
           <el-col :xs="24" :sm="12" :md="6"><el-form-item label="预算"><el-input-number v-model="gen.budget" :min="0" /></el-form-item></el-col>
         </el-row>
@@ -40,14 +43,18 @@
           </div>
         </el-card>
         <el-card shadow="hover" style="margin-top:12px">
-          <template #header><div class="card-header">地图预览（D1）</div></template>
+          <template #header>
+            <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <span>地图预览</span>
+              <div v-if="generated?.dayPlans?.length">
+                <el-select v-model="selectedDayIndex" size="small" style="width:160px" @change="(i:number)=>buildMapPointsFromDayIndex(i)">
+                  <el-option v-for="(d,i) in generated.dayPlans" :key="i" :label="(d.date ? d.date : ('D' + (i+1)))" :value="i" />
+                </el-select>
+              </div>
+            </div>
+          </template>
           <div v-if="mapPoints.length === 0" class="small muted">暂无可渲染的地点（生成或补全后显示）</div>
           <MapView v-else :points="mapPoints" />
-          <div v-if="generated?.dayPlans?.length" style="margin-top:8px; display:flex; justify-content:flex-end;">
-            <el-select v-model="selectedDayIndex" size="small" style="width:160px" @change="(i:number)=>buildMapPointsFromDayIndex(i)">
-              <el-option v-for="(d,i) in generated.dayPlans" :key="i" :label="(d.date || `D${i+1}`)" :value="i" />
-            </el-select>
-          </div>
         </el-card>
       </el-col>
       <el-col :xs="24" :md="10">
@@ -85,12 +92,12 @@
       </el-col>
     </el-row>
 
-    <section class="card">
+    <section class="card" style="margin-top:12px">
       <h2>快速提示</h2>
       <ul class="bullet-list">
         <li>未配置 Supabase 也可体验行程生成功能；保存/列表需登录。</li>
         <li>预算记账支持简单统计，后续将提供图表与分类汇总。</li>
-        <li>地图与地点检索将集成高德 JS SDK，敬请期待。</li>
+        <li>地图支持按日切换与标注信息窗。</li>
       </ul>
     </section>
   </section>
@@ -108,24 +115,28 @@ onMounted(async () => {
   if (!supabaseReady) return;
   const { data } = await supabase.auth.getUser();
   userEmail.value = data.user?.email || '';
-  supabase.auth.onAuthStateChange((_, session) => {
+  supabase.auth.onAuthStateChange((_event: any, session: any) => {
     userEmail.value = session?.user?.email || '';
     if (userEmail.value) loadItineraries();
   });
   if (userEmail.value) loadItineraries();
 });
 
-// 行程生成与保存（演示）
+// 行程生成与保存
 const gen = ref<{ destination: string; days: number; people: number; budget?: number }>({
-  destination: '东京',
+  destination: '南京',
   days: 2,
   people: 2,
-  budget: 6000,
+  budget: 3000,
 });
+const dateRange = ref<[Date, Date] | null>(null);
+const startDate = ref<string | undefined>();
+const endDate = ref<string | undefined>();
 const generated = ref<any>(null);
 const genLoading = ref(false);
 const saveMsg = ref('');
 const myItineraries = ref<any[]>([]);
+const selectedDayIndex = ref<number>(0);
 
 async function generateItinerary() {
   genLoading.value = true;
@@ -134,12 +145,9 @@ async function generateItinerary() {
     const res = await fetch('/api/itineraries/generate', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...gen.value, preferences: ['美食', '亲子'] }),
+      body: JSON.stringify({ destination: gen.value.destination, days: gen.value.days, people: gen.value.people, budget: gen.value.budget, startDate: startDate.value, endDate: endDate.value, preferences: ['美食', '亲子'] }),
     });
     generated.value = await res.json();
-    // 默认展示 D1
-    // 保留旧函数调用，随后按选择的日程重建点位
-    await buildMapPoints();
     selectedDayIndex.value = 0;
     await buildMapPointsFromDayIndex(0);
   } catch (e) {
@@ -151,30 +159,28 @@ async function generateItinerary() {
 
 const canSave = computed(() => supabaseReady && !!userEmail.value && !!generated.value);
 
-// 地图点位（取第一天活动，若缺经纬度则尝试查询）
-const mapPoints = ref<{ name?: string; lat: number; lng: number }[]>([]);
+const mapPoints = ref<{ name?: string; lat: number; lng: number; info?: string }[]>([]);
 
-async function buildMapPoints() {
+async function buildMapPointsFromDayIndex(i: number) {
   mapPoints.value = [];
-  if (!generated.value) return;
-  const day0 = generated.value.dayPlans?.[0];
-  if (!day0 || !day0.activities) return;
-  const acts = day0.activities as any[];
-  const pts: { name?: string; lat: number; lng: number }[] = [];
-  for (const a of acts) {
+  const day = generated.value?.dayPlans?.[i];
+  if (!day?.activities?.length) return;
+  const pts: { name?: string; lat: number; lng: number; info?: string }[] = [];
+  for (const a of day.activities as any[]) {
+    const info = [a.start && a.end ? `${a.start} - ${a.end}` : '', a.notes || ''].filter(Boolean).join(' · ');
     if (typeof a.lat === 'number' && typeof a.lng === 'number') {
-      pts.push({ name: a.name, lat: a.lat, lng: a.lng });
+      pts.push({ name: a.name, lat: a.lat, lng: a.lng, info });
     } else if (a.name) {
       try {
         const res = await fetch('/api/places/search?q=' + encodeURIComponent(a.name));
         const data = await res.json();
         const first = data.items?.[0];
         if (first && typeof first.lat === 'number' && typeof first.lng === 'number') {
-          pts.push({ name: a.name, lat: first.lat, lng: first.lng });
+          pts.push({ name: a.name, lat: first.lat, lng: first.lng, info });
         }
       } catch {}
     }
-    if (pts.length >= 8) break; // 控制点位数量，避免过多请求
+    if (pts.length >= 12) break;
   }
   mapPoints.value = pts;
 }
@@ -211,7 +217,7 @@ async function removeItinerary(id: string) {
   await loadItineraries();
 }
 
-// 预算记账（最小）
+// 预算
 const selectedItineraryId = ref<string>('');
 const beAmount = ref<number | null>(null);
 const beCategory = ref<string>('food');
@@ -249,33 +255,25 @@ async function loadBudgetSummary(itineraryId: string) {
   budgetSummary.value = { count: data?.length || 0, total };
 }
 
-// 根据选择的日程重建地图点位
-async function buildMapPointsFromDayIndex(i: number) {
-  try {
-    selectedDayIndex.value = i ?? 0;
-    // 复制生成逻辑，按所选日提取活动
-    const day = generated.value?.dayPlans?.[selectedDayIndex.value];
-    const pts: { name?: string; lat: number; lng: number; info?: string }[] = [];
-    if (day?.activities?.length) {
-      for (const a of day.activities as any[]) {
-        const info = [a.start && a.end ? `${a.start} - ${a.end}` : '', a.notes || ''].filter(Boolean).join(' · ');
-        if (typeof a.lat === 'number' && typeof a.lng === 'number') {
-          pts.push({ name: a.name, lat: a.lat, lng: a.lng, info });
-        } else if (a.name) {
-          try {
-            const res = await fetch('/api/places/search?q=' + encodeURIComponent(a.name));
-            const data = await res.json();
-            const first = data.items?.[0];
-            if (first && typeof first.lat === 'number' && typeof first.lng === 'number') {
-              pts.push({ name: a.name, lat: first.lat, lng: first.lng, info });
-            }
-          } catch {}
-        }
-        if (pts.length >= 12) break;
-      }
-    }
-    mapPoints.value = pts;
-  } catch {}
+function onDateChange() {
+  if (!dateRange.value || dateRange.value.length !== 2) {
+    startDate.value = undefined;
+    endDate.value = undefined;
+    return;
+  }
+  const [s, e] = dateRange.value;
+  startDate.value = fmtDate(s);
+  endDate.value = fmtDate(e);
+  const ms = e.getTime() - s.getTime();
+  const days = Math.max(1, Math.ceil(ms / (24*60*60*1000)) + 1);
+  gen.value.days = days;
+}
+
+function fmtDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 </script>
 

@@ -14,6 +14,10 @@ public class GenerateRequest {
     @Min(1)
     private int people;
 
+    // 新增：日期范围（可选），格式建议 ISO-8601（yyyy-MM-dd）
+    private String startDate;
+    private String endDate;
+
     private Integer budget; // 单位：本币（可选）
 
     private List<String> preferences; // 例如：美食/亲子
@@ -52,6 +56,11 @@ public class GenerateRequest {
         this.budget = budget;
     }
 
+    public String getStartDate() { return startDate; }
+    public void setStartDate(String startDate) { this.startDate = startDate; }
+    public String getEndDate() { return endDate; }
+    public void setEndDate(String endDate) { this.endDate = endDate; }
+
     public List<String> getPreferences() {
         return preferences;
     }
@@ -68,4 +77,3 @@ public class GenerateRequest {
         this.pace = pace;
     }
 }
-

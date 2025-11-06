@@ -81,8 +81,12 @@ public class BailianClient {
     private String buildUserPrompt(GenerateRequest r) {
         String prefs = (r.getPreferences() == null || r.getPreferences().isEmpty()) ? "无" : String.join("/", r.getPreferences());
         String pace = (r.getPace() == null || r.getPace().isBlank()) ? "均衡" : r.getPace();
-        return String.format("目的地:%s\n天数:%d\n人数:%d\n预算:%s\n偏好:%s\n节奏:%s\n要求: 合理的每日时间安排，给出餐饮/景点/交通建议，包含费用估算与注意事项。",
-                r.getDestination(), r.getDays(), r.getPeople(), r.getBudget() == null ? "未提供" : r.getBudget().toString(), prefs, pace);
+        String datePart = (r.getStartDate() != null && !r.getStartDate().isBlank() && r.getEndDate() != null && !r.getEndDate().isBlank())
+                ? (r.getStartDate() + " 至 " + r.getEndDate())
+                : "未提供";
+        return String.format(
+                "目的地:%s\n日期范围:%s\n天数:%d\n人数:%d\n预算:%s\n偏好:%s\n节奏:%s\n要求: 按日期输出每日时间安排（标注日期/或D1..），给出餐饮/景点/交通建议，包含费用估算与注意事项。地点尽量附经纬度；无法给出经纬度时返回可检索名称。",
+                r.getDestination(), datePart, r.getDays(), r.getPeople(), r.getBudget() == null ? "未提供" : r.getBudget().toString(), prefs, pace);
     }
 
     private String normalizeBase(String b) {
@@ -98,4 +102,3 @@ public class BailianClient {
         return c; // 尝试直接解析
     }
 }
-
