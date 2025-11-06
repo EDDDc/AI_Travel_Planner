@@ -1,4 +1,4 @@
-FROM docker.m.daocloud.io/library/node:18-alpine AS build
+FROM node:18-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN npm ci || npm i
@@ -16,7 +16,7 @@ ENV VITE_AMAP_SECURITY_JSCODE=${VITE_AMAP_SECURITY_JSCODE}
 
 RUN npm run build
 
-FROM docker.m.daocloud.io/library/nginx:alpine
+FROM nginx:alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 # build context will be project root (set in compose), so we can copy from deploy/
 COPY deploy/nginx/default.conf /etc/nginx/conf.d/default.conf
