@@ -1,30 +1,35 @@
 <template>
   <main class="container">
-    <h1>AI 旅行规划师（Web）</h1>
-    <section class="actions">
-      <button @click="checkHealth">检查后端健康</button>
-      <span class="status" :data-ok="healthStatus === 'ok'">状态：{{ healthStatus || '未检查' }}</span>
-    </section>
+    <header class="header">
+      <div>
+        <h1 class="title">AI 旅行规划师（Web）</h1>
+        <p class="subtitle">快速生成行程、轻松记账、地图查看。</p>
+      </div>
+      <div class="section-actions">
+        <button class="btn" @click="checkHealth">检查后端健康</button>
+        <span class="status" :data-ok="healthStatus === 'ok'">{{ healthStatus ? ('状态：' + healthStatus) : '状态：未检查' }}</span>
+      </div>
+    </header>
 
-    <section class="auth">
+    <section class="auth card">
       <h2>账户（Supabase Auth）</h2>
       <div v-if="!supabaseReady" class="hint">未配置 Supabase（请在 web/.env.local 中设置 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY）</div>
       <div v-else>
         <div v-if="userEmail">
           <div>已登录：{{ userEmail }}</div>
-          <button @click="signOut">退出登录</button>
+          <button class="btn ghost" @click="signOut">退出登录</button>
         </div>
         <div v-else class="login">
-          <input v-model="email" type="email" placeholder="邮箱" />
-          <input v-model="password" type="password" placeholder="密码" />
-          <button @click="signIn">登录</button>
-          <button @click="signUp" class="ghost">注册</button>
+          <input class="input" v-model="email" type="email" placeholder="邮箱" />
+          <input class="input" v-model="password" type="password" placeholder="密码" />
+          <button class="btn" @click="signIn">登录</button>
+          <button class="btn ghost" @click="signUp">注册</button>
           <span class="auth-msg">{{ authMsg }}</span>
         </div>
       </div>
     </section>
 
-    <section class="next">
+    <section class="next card">
       <h2>接下来要做</h2>
       <ul>
         <li>行程生成最小 API 对接</li>
@@ -33,19 +38,19 @@
       </ul>
     </section>
 
-    <section class="itinerary">
+    <section class="itinerary card">
       <h2>行程生成与保存（演示）</h2>
-      <div class="gen-form">
-        <input v-model="gen.destination" placeholder="目的地" />
-        <input v-model.number="gen.days" type="number" min="1" placeholder="天数" />
-        <input v-model.number="gen.people" type="number" min="1" placeholder="人数" />
-        <input v-model.number="gen.budget" type="number" min="0" placeholder="预算（可选）" />
-        <button @click="generateItinerary">生成行程</button>
+      <div class="gen-form grid">
+        <input class="input" v-model="gen.destination" placeholder="目的地" />
+        <input class="input" v-model.number="gen.days" type="number" min="1" placeholder="天数" />
+        <input class="input" v-model.number="gen.people" type="number" min="1" placeholder="人数" />
+        <input class="input" v-model.number="gen.budget" type="number" min="0" placeholder="预算（可选）" />
+        <button class="btn" @click="generateItinerary">生成行程</button>
       </div>
-      <div v-if="genLoading">生成中...</div>
+      <div v-if="genLoading" class="small"><span class="spinner"></span> 生成中...</div>
       <div v-if="generated" class="gen-result">
         <div class="summary">目的地：{{ generated.destination }}｜天数：{{ generated.days }}｜方案ID：{{ generated.itineraryId }}</div>
-        <button :disabled="!canSave" @click="saveItinerary">保存到云端</button>
+        <button class="btn" :disabled="!canSave" @click="saveItinerary">保存到云端</button>
         <div class="small">{{ saveMsg }}</div>
         <pre>{{ JSON.stringify(generated, null, 2) }}</pre>
       </div>
@@ -56,23 +61,27 @@
         <div v-else-if="!userEmail">需登录后查看</div>
         <ul v-else>
           <li v-for="it in myItineraries" :key="it.id">
-            <strong>{{ it.title || (it.destination + '·' + (it.days || '')) }}</strong>
-            <span class="muted">（{{ it.destination }}）</span>
-            <button class="ghost" @click="removeItinerary(it.id)">删除</button>
+            <div>
+              <strong>{{ it.title || (it.destination + '·' + (it.days || '')) }}</strong>
+              <span class="muted">（{{ it.destination }}）</span>
+            </div>
+            <div>
+              <button class="btn ghost" @click="removeItinerary(it.id)">删除</button>
+            </div>
           </li>
         </ul>
-        <button v-if="supabaseReady && userEmail" class="ghost" @click="loadItineraries">刷新</button>
+        <button v-if="supabaseReady && userEmail" class="btn ghost" @click="loadItineraries">刷新</button>
 
         <div v-if="supabaseReady && userEmail" class="budget">
           <h4>记一笔预算</h4>
-          <select v-model="selectedItineraryId" @change="loadBudgetSummary(selectedItineraryId)">
+          <select class="input" v-model="selectedItineraryId" @change="loadBudgetSummary(selectedItineraryId)">
             <option value="" disabled>选择行程</option>
             <option v-for="it in myItineraries" :key="it.id" :value="it.id">{{ it.title || it.destination }}</option>
           </select>
-          <input v-model.number="beAmount" type="number" min="0" placeholder="金额" />
-          <input v-model="beCategory" placeholder="类别(如 food)" />
-          <input v-model="beNote" placeholder="备注(可选)" />
-          <button @click="addBudgetEntry">新增</button>
+          <input class="input" v-model.number="beAmount" type="number" min="0" placeholder="金额" />
+          <input class="input" v-model="beCategory" placeholder="类别(如 food)" />
+          <input class="input" v-model="beNote" placeholder="备注(可选)" />
+          <button class="btn" @click="addBudgetEntry">新增</button>
           <span class="small">{{ budgetMsg }}</span>
           <div v-if="budgetSummary" class="small">当前行程：{{ budgetSummary.count }} 笔，共计 {{ budgetSummary.total }}</div>
         </div>
@@ -235,23 +244,8 @@ async function loadBudgetSummary(itineraryId: string) {
 </script>
 
 <style scoped>
-.container { max-width: 760px; margin: 40px auto; padding: 0 16px; font-family: -apple-system,Segoe UI,Roboto,Helvetica,Arial,sans-serif; }
-.actions { display: flex; gap: 12px; align-items: center; }
-button { padding: 8px 12px; cursor: pointer; }
-.status[data-ok="true"] { color: #2e7d32; }
-.status[data-ok="false"] { color: #9c27b0; }
-h1 { margin-bottom: 12px; }
-.next { margin-top: 24px; }
-.auth { margin-top: 24px; }
+.auth { margin-top: 8px; }
+.next { margin-top: 8px; }
+.itinerary { margin-top: 8px; }
 .login { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
-.ghost { background: #fff; border: 1px solid #999; }
-.auth-msg { margin-left: 8px; color: #555; }
-.hint { color: #b26a00; }
-.itinerary { margin-top: 24px; }
-.gen-form { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
-.gen-result { margin-top: 8px; }
-.summary { margin: 8px 0; }
-.muted { color: #666; margin: 0 8px; }
-.small { color: #555; margin-top: 4px; }
 </style>
