@@ -1,0 +1,196 @@
+<template>
+  <section>
+    <section class="next card">
+      <h2>接下来要做</h2>
+      <ul class="bullet-list">
+        <li>行程生成最小 API 对接</li>
+        <li>语音 ASR 最小 API 对接</li>
+        <li>高德地图展示与检索</li>
+      </ul>
+    </section>
+
+    <section class="itinerary card">
+      <h2>行程生成与保存（演示）</h2>
+      <div class="gen-form grid">
+        <input class="input" v-model="gen.destination" placeholder="目的地" />
+        <input class="input" v-model.number="gen.days" type="number" min="1" placeholder="天数" />
+        <input class="input" v-model.number="gen.people" type="number" min="1" placeholder="人数" />
+        <input class="input" v-model.number="gen.budget" type="number" min="0" placeholder="预算（可选）" />
+        <button class="btn" @click="generateItinerary">生成行程</button>
+      </div>
+      <div v-if="genLoading" class="small"><span class="spinner"></span> 生成中...</div>
+      <div v-if="generated" class="gen-result">
+        <div class="summary">目的地：{{ generated.destination }}｜天数：{{ generated.days }}｜方案ID：{{ generated.itineraryId }}</div>
+        <button class="btn" :disabled="!canSave" @click="saveItinerary">保存到云端</button>
+        <div class="small">{{ saveMsg }}</div>
+        <pre>{{ JSON.stringify(generated, null, 2) }}</pre>
+      </div>
+
+      <div class="list">
+        <h3>我的行程</h3>
+        <div v-if="!supabaseReady">需配置 Supabase 才能列出</div>
+        <div v-else-if="!userEmail">需登录后查看（前往“个人中心”登录）</div>
+        <ul v-else>
+          <li v-for="it in myItineraries" :key="it.id">
+            <div>
+              <strong>{{ it.title || (it.destination + '·' + (it.days || '')) }}</strong>
+              <span class="muted">（{{ it.destination }}）</span>
+            </div>
+            <div>
+              <button class="btn ghost" @click="removeItinerary(it.id)">删除</button>
+            </div>
+          </li>
+        </ul>
+        <button v-if="supabaseReady && userEmail" class="btn ghost" @click="loadItineraries">刷新</button>
+
+        <div v-if="supabaseReady && userEmail" class="budget">
+          <h4>记一笔预算</h4>
+          <select class="input" v-model="selectedItineraryId" @change="loadBudgetSummary(selectedItineraryId)">
+            <option value="" disabled>选择行程</option>
+            <option v-for="it in myItineraries" :key="it.id" :value="it.id">{{ it.title || it.destination }}</option>
+          </select>
+          <input class="input" v-model.number="beAmount" type="number" min="0" placeholder="金额" />
+          <input class="input" v-model="beCategory" placeholder="类别(如 food)" />
+          <input class="input" v-model="beNote" placeholder="备注(可选)" />
+          <button class="btn" @click="addBudgetEntry">新增</button>
+          <span class="small">{{ budgetMsg }}</span>
+          <div v-if="budgetSummary" class="small">当前行程：{{ budgetSummary.count }} 笔，共计 {{ budgetSummary.total }}</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>快速提示</h2>
+      <ul class="bullet-list">
+        <li>未配置 Supabase 也可体验行程生成功能；保存/列表需登录。</li>
+        <li>预算记账支持简单统计，后续将提供图表与分类汇总。</li>
+        <li>地图与地点检索将集成高德 JS SDK，敬请期待。</li>
+      </ul>
+    </section>
+  </section>
+</template>
+
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue';
+import { supabase, hasSupabaseConfig } from '../lib/supabase';
+
+const supabaseReady = hasSupabaseConfig;
+const userEmail = ref<string>('');
+
+onMounted(async () => {
+  if (!supabaseReady) return;
+  const { data } = await supabase.auth.getUser();
+  userEmail.value = data.user?.email || '';
+  supabase.auth.onAuthStateChange((_, session) => {
+    userEmail.value = session?.user?.email || '';
+    if (userEmail.value) loadItineraries();
+  });
+  if (userEmail.value) loadItineraries();
+});
+
+// 行程生成与保存（演示）
+const gen = ref<{ destination: string; days: number; people: number; budget?: number }>({
+  destination: '东京',
+  days: 2,
+  people: 2,
+  budget: 6000,
+});
+const generated = ref<any>(null);
+const genLoading = ref(false);
+const saveMsg = ref('');
+const myItineraries = ref<any[]>([]);
+
+async function generateItinerary() {
+  genLoading.value = true;
+  saveMsg.value = '';
+  try {
+    const res = await fetch('/api/itineraries/generate', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ...gen.value, preferences: ['美食', '亲子'] }),
+    });
+    generated.value = await res.json();
+  } catch (e) {
+    saveMsg.value = '生成失败';
+  } finally {
+    genLoading.value = false;
+  }
+}
+
+const canSave = computed(() => supabaseReady && !!userEmail.value && !!generated.value);
+
+async function saveItinerary() {
+  if (!canSave.value) return;
+  saveMsg.value = '保存中...';
+  const user = (await supabase.auth.getUser()).data.user;
+  if (!user) { saveMsg.value = '未登录'; return; }
+  const title = `${generated.value.destination}·${generated.value.days}天行程`;
+  const insertData: any = {
+    user_id: user.id,
+    title,
+    destination: generated.value.destination,
+    people: gen.value.people,
+    budget_target: gen.value.budget || null,
+    preferences_json: { preferences: ['美食', '亲子'] },
+  };
+  const { error } = await supabase.from('itineraries').insert(insertData).select().single();
+  if (error) { saveMsg.value = '保存失败：' + error.message; return; }
+  saveMsg.value = '保存成功';
+  await loadItineraries();
+}
+
+async function loadItineraries() {
+  if (!supabaseReady) return;
+  const { data, error } = await supabase.from('itineraries').select('*').order('created_at', { ascending: false });
+  if (!error) myItineraries.value = data || [];
+}
+
+async function removeItinerary(id: string) {
+  if (!supabaseReady) return;
+  await supabase.from('itineraries').delete().eq('id', id);
+  await loadItineraries();
+}
+
+// 预算记账（最小）
+const selectedItineraryId = ref<string>('');
+const beAmount = ref<number | null>(null);
+const beCategory = ref<string>('food');
+const beNote = ref<string>('');
+const budgetMsg = ref('');
+const budgetSummary = ref<{ count: number; total: number } | null>(null);
+
+async function addBudgetEntry() {
+  budgetMsg.value = '';
+  if (!supabaseReady || !selectedItineraryId.value || !beAmount.value) {
+    budgetMsg.value = '请选择行程并填写金额';
+    return;
+  }
+  const { error } = await supabase.from('budget_entries').insert({
+    itinerary_id: selectedItineraryId.value,
+    amount: beAmount.value,
+    currency: 'CNY',
+    category: beCategory.value,
+    note: beNote.value,
+    source: 'manual',
+  });
+  budgetMsg.value = error ? ('新增失败：' + error.message) : '新增成功';
+  if (!error) {
+    beAmount.value = null;
+    beNote.value = '';
+    await loadBudgetSummary(selectedItineraryId.value);
+  }
+}
+
+async function loadBudgetSummary(itineraryId: string) {
+  if (!supabaseReady || !itineraryId) { budgetSummary.value = null; return; }
+  const { data, error } = await supabase.from('budget_entries').select('amount').eq('itinerary_id', itineraryId);
+  if (error) { budgetSummary.value = null; return; }
+  const total = (data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
+  budgetSummary.value = { count: data?.length || 0, total };
+}
+</script>
+
+<style scoped>
+.itinerary { margin-top: 8px; }
+</style>
+
