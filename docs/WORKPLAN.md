@@ -14,7 +14,7 @@
  - [x] 接入 Supabase Auth（前端登录）与最小数据表（行程/活动/记账）
 - [ ] 行程与预算 CRUD（前端直连 Supabase，RLS 仅本人可见）
 - [ ] 前端 MVP：创建向导（文本/语音）→ 生成行程 → 地图与列表展示 → 语音记账
-- [ ] Docker 化与本地一键运行（docker-compose 前后端+Nginx）
+- [x] Docker 化与本地一键运行（docker-compose 前后端+Nginx）
 - [ ] README 与提交 PDF（含仓库地址与运行说明）
 - [ ] 基础健壮性：错误提示、加载态、简单限流
 
@@ -47,6 +47,7 @@
 - README（环境变量、运行、测试、常见问题）
 - 提交 PDF（含仓库地址与 README 要点）
 - GitHub Actions（可选，最后阶段添加并推送 ACR）
+
 
 
 
