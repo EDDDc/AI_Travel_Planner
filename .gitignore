@@ -1,0 +1,14 @@
+# Local environment and overrides
+.env
+web/.env.local
+docker-compose.override.yml
+docker-compose.*.local.yml
+
+# Node and build artifacts (extra safety)
+node_modules/
+web/node_modules/
+dist/
+web/dist/
+
+# OS junk
+**/.DS_Store
