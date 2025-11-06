@@ -1,5 +1,8 @@
 -- 基础表结构（最小化）与 RLS 策略
 
+-- 需要生成 UUID 的函数（Supabase 通常已启用，如未启用则创建）
+create extension if not exists pgcrypto;
+
 create table if not exists public.itineraries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null,
@@ -50,28 +53,38 @@ alter table public.itineraries enable row level security;
 alter table public.activities enable row level security;
 alter table public.budget_entries enable row level security;
 
--- RLS 策略：仅允许本人读写自己的数据
-create policy if not exists "itineraries_owner_select" on public.itineraries
+-- 注意：PostgreSQL 不支持 CREATE POLICY IF NOT EXISTS
+-- 先尝试删除旧策略，再创建新策略
+drop policy if exists "itineraries_owner_select" on public.itineraries;
+create policy "itineraries_owner_select" on public.itineraries
   for select using (auth.uid() = user_id);
-create policy if not exists "itineraries_owner_mod" on public.itineraries
+
+drop policy if exists "itineraries_owner_mod" on public.itineraries;
+create policy "itineraries_owner_mod" on public.itineraries
   for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
-create policy if not exists "activities_owner_select" on public.activities
+drop policy if exists "activities_owner_select" on public.activities;
+create policy "activities_owner_select" on public.activities
   for select using (exists (
     select 1 from public.itineraries i where i.id = activities.itinerary_id and i.user_id = auth.uid()
   ));
-create policy if not exists "activities_owner_mod" on public.activities
+
+drop policy if exists "activities_owner_mod" on public.activities;
+create policy "activities_owner_mod" on public.activities
   for all using (exists (
     select 1 from public.itineraries i where i.id = activities.itinerary_id and i.user_id = auth.uid()
   )) with check (exists (
     select 1 from public.itineraries i where i.id = activities.itinerary_id and i.user_id = auth.uid()
   ));
 
-create policy if not exists "budget_owner_select" on public.budget_entries
+drop policy if exists "budget_owner_select" on public.budget_entries;
+create policy "budget_owner_select" on public.budget_entries
   for select using (exists (
     select 1 from public.itineraries i where i.id = budget_entries.itinerary_id and i.user_id = auth.uid()
   ));
-create policy if not exists "budget_owner_mod" on public.budget_entries
+
+drop policy if exists "budget_owner_mod" on public.budget_entries;
+create policy "budget_owner_mod" on public.budget_entries
   for all using (exists (
     select 1 from public.itineraries i where i.id = budget_entries.itinerary_id and i.user_id = auth.uid()
   )) with check (exists (
@@ -91,4 +104,3 @@ drop trigger if exists set_itineraries_updated on public.itineraries;
 create trigger set_itineraries_updated
 before update on public.itineraries
 for each row execute procedure public.set_updated_at();
-
