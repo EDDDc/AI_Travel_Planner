@@ -13,7 +13,8 @@
     "@supabase/supabase-js": "^2.45.4",
     "vue-router": "^4.3.0",
     "element-plus": "^2.8.6",
-    "@element-plus/icons-vue": "^2.3.1"
+    "@element-plus/icons-vue": "^2.3.1",
+    "@amap/amap-jsapi-loader": "^1.0.1"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.0",

@@ -39,6 +39,11 @@
             <pre style="margin-top:8px">{{ JSON.stringify(generated, null, 2) }}</pre>
           </div>
         </el-card>
+        <el-card shadow="hover" style="margin-top:12px">
+          <template #header><div class="card-header">地图预览（D1）</div></template>
+          <div v-if="mapPoints.length === 0" class="small muted">暂无可渲染的地点（生成或补全后显示）</div>
+          <MapView v-else :points="mapPoints" />
+        </el-card>
       </el-col>
       <el-col :xs="24" :md="10">
         <el-card shadow="hover">
@@ -89,6 +94,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue';
 import { supabase, hasSupabaseConfig } from '../lib/supabase';
+import MapView from '../components/MapView.vue';
 
 const supabaseReady = hasSupabaseConfig;
 const userEmail = ref<string>('');
@@ -126,6 +132,7 @@ async function generateItinerary() {
       body: JSON.stringify({ ...gen.value, preferences: ['美食', '亲子'] }),
     });
     generated.value = await res.json();
+    await buildMapPoints();
   } catch (e) {
     saveMsg.value = '生成失败';
   } finally {
@@ -134,6 +141,34 @@ async function generateItinerary() {
 }
 
 const canSave = computed(() => supabaseReady && !!userEmail.value && !!generated.value);
+
+// 地图点位（取第一天活动，若缺经纬度则尝试查询）
+const mapPoints = ref<{ name?: string; lat: number; lng: number }[]>([]);
+
+async function buildMapPoints() {
+  mapPoints.value = [];
+  if (!generated.value) return;
+  const day0 = generated.value.dayPlans?.[0];
+  if (!day0 || !day0.activities) return;
+  const acts = day0.activities as any[];
+  const pts: { name?: string; lat: number; lng: number }[] = [];
+  for (const a of acts) {
+    if (typeof a.lat === 'number' && typeof a.lng === 'number') {
+      pts.push({ name: a.name, lat: a.lat, lng: a.lng });
+    } else if (a.name) {
+      try {
+        const res = await fetch('/api/places/search?q=' + encodeURIComponent(a.name));
+        const data = await res.json();
+        const first = data.items?.[0];
+        if (first && typeof first.lat === 'number' && typeof first.lng === 'number') {
+          pts.push({ name: a.name, lat: first.lat, lng: first.lng });
+        }
+      } catch {}
+    }
+    if (pts.length >= 8) break; // 控制点位数量，避免过多请求
+  }
+  mapPoints.value = pts;
+}
 
 async function saveItinerary() {
   if (!canSave.value) return;
