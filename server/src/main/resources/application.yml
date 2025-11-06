@@ -1,0 +1,26 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: ai-travel-planner
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+app:
+  ai:
+    bailian:
+      apiKey: ${BAILIAN_API_KEY:}
+  asr:
+    xfyun:
+      appId: ${XF_APP_ID:}
+      apiKey: ${XF_API_KEY:}
+      apiSecret: ${XF_API_SECRET:}
+  map:
+    amap:
+      key: ${AMAP_KEY:}
+
