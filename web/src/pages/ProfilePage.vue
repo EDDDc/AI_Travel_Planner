@@ -36,13 +36,29 @@
   </el-card>
 
   <el-card shadow="hover" style="margin-top:12px">
-    <template #header><div class="card-header">偏好与密钥（占位）</div></template>
-    <div class="grid">
-      <el-input v-model="pref.currency" placeholder="默认币种，例如 CNY" />
-      <el-input v-model="pref.locale" placeholder="语言/地区，例如 zh-CN" />
-      <el-input v-model="pref.aiModel" placeholder="阿里百炼模型标识（可选）" />
-    </div>
-    <div class="small muted" style="margin-top:8px">说明：为安全起见，不在前端保存或展示服务端密钥；后续在设置页通过后端安全存储。</div>
+    <template #header><div class="card-header">资料与偏好</div></template>
+    <el-form label-width="90">
+      <el-form-item label="昵称">
+        <el-input v-model="profile.display_name" placeholder="显示名称" style="max-width:320px" />
+      </el-form-item>
+      <el-form-item label="头像URL">
+        <el-input v-model="profile.avatar_url" placeholder="头像链接（可选）" style="max-width:420px" />
+      </el-form-item>
+      <el-form-item label="默认币种">
+        <el-input v-model="pref.currency" placeholder="例如 CNY" style="max-width:220px" />
+      </el-form-item>
+      <el-form-item label="语言地区">
+        <el-input v-model="pref.locale" placeholder="例如 zh-CN" style="max-width:220px" />
+      </el-form-item>
+      <el-form-item label="AI 模型">
+        <el-input v-model="pref.aiModel" placeholder="阿里百炼模型标识（可选）" style="max-width:320px" />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" :loading="saving" @click="saveProfile">保存</el-button>
+        <span class="small" style="margin-left:8px">{{ saveMsg }}</span>
+      </el-form-item>
+    </el-form>
+    <div class="small muted" style="margin-top:8px">说明：不在前端存储服务端密钥；如需密钥，将在后端安全存储并通过设置页对接。</div>
   </el-card>
 </template>
 
@@ -85,6 +101,49 @@ async function signOut() {
 }
 
 const pref = ref({ currency: 'CNY', locale: 'zh-CN', aiModel: '' });
+
+const profile = ref<{ display_name?: string; avatar_url?: string }>({});
+const saving = ref(false);
+const saveMsg = ref('');
+
+onMounted(async () => {
+  await loadProfile();
+});
+
+async function loadProfile() {
+  if (!supabaseReady || !userEmail.value) return;
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id;
+  if (!uid) return;
+  const { data } = await supabase.from('profiles').select('*').eq('user_id', uid).single();
+  if (data) {
+    profile.value.display_name = data.display_name || '';
+    profile.value.avatar_url = data.avatar_url || '';
+    const p = data.preferences || data.preferences_json;
+    if (p) {
+      pref.value.currency = p.currency || pref.value.currency;
+      pref.value.locale = p.locale || pref.value.locale;
+      pref.value.aiModel = p.aiModel || pref.value.aiModel;
+    }
+  }
+}
+
+async function saveProfile() {
+  saveMsg.value = '';
+  if (!supabaseReady || !userEmail.value) { saveMsg.value = '未登录'; return; }
+  saving.value = true;
+  const { data: userData } = await supabase.auth.getUser();
+  const uid = userData.user?.id as string;
+  const upsertData = {
+    user_id: uid,
+    display_name: profile.value.display_name || null,
+    avatar_url: profile.value.avatar_url || null,
+    preferences: { currency: pref.value.currency, locale: pref.value.locale, aiModel: pref.value.aiModel },
+  };
+  const { error } = await supabase.from('profiles').upsert(upsertData, { onConflict: 'user_id' }).select().single();
+  saving.value = false;
+  saveMsg.value = error ? ('保存失败：' + error.message) : '保存成功';
+}
 </script>
 
 <style scoped>

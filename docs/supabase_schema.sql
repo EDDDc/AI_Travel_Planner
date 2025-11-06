@@ -3,6 +3,28 @@
 -- 需要生成 UUID 的函数（Supabase 通常已启用，如未启用则创建）
 create extension if not exists pgcrypto;
 
+-- 用户档案（用于存储个人资料与偏好），与 auth.users 对齐
+create table if not exists public.profiles (
+  user_id uuid primary key references auth.users(id) on delete cascade,
+  display_name text,
+  avatar_url text,
+  preferences jsonb default '{}',
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+create index if not exists idx_profiles_user on public.profiles(user_id);
+
+alter table public.profiles enable row level security;
+
+drop policy if exists "profiles_owner_select" on public.profiles;
+create policy "profiles_owner_select" on public.profiles
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "profiles_owner_mod" on public.profiles;
+create policy "profiles_owner_mod" on public.profiles
+  for all using (auth.uid() = user_id) with check (auth.uid() = user_id);
+
 create table if not exists public.itineraries (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null,
@@ -103,4 +125,9 @@ $$ language plpgsql;
 drop trigger if exists set_itineraries_updated on public.itineraries;
 create trigger set_itineraries_updated
 before update on public.itineraries
+for each row execute procedure public.set_updated_at();
+
+drop trigger if exists set_profiles_updated on public.profiles;
+create trigger set_profiles_updated
+before update on public.profiles
 for each row execute procedure public.set_updated_at();
