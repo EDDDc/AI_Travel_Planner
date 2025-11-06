@@ -10,19 +10,17 @@
       <h2>账户（Supabase Auth）</h2>
       <div v-if="!supabaseReady" class="hint">未配置 Supabase（请在 web/.env.local 中设置 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY）</div>
       <div v-else>
-        <div v-if="userEmail; else loginForm">
+        <div v-if="userEmail">
           <div>已登录：{{ userEmail }}</div>
           <button @click="signOut">退出登录</button>
         </div>
-        <template #loginForm>
-          <div class="login">
-            <input v-model="email" type="email" placeholder="邮箱" />
-            <input v-model="password" type="password" placeholder="密码" />
-            <button @click="signIn">登录</button>
-            <button @click="signUp" class="ghost">注册</button>
-            <span class="auth-msg">{{ authMsg }}</span>
-          </div>
-        </template>
+        <div v-else class="login">
+          <input v-model="email" type="email" placeholder="邮箱" />
+          <input v-model="password" type="password" placeholder="密码" />
+          <button @click="signIn">登录</button>
+          <button @click="signUp" class="ghost">注册</button>
+          <span class="auth-msg">{{ authMsg }}</span>
+        </div>
       </div>
     </section>
 
