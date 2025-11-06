@@ -18,13 +18,20 @@ let markers: any[] = [];
 let polyline: any | null = null;
 
 const amapKey = import.meta.env.VITE_AMAP_KEY as string | undefined;
+const amapJsCode = import.meta.env.VITE_AMAP_SECURITY_JSCODE as string | undefined;
 
 async function initMap() {
   if (!amapKey || !mapEl.value) return;
+  // 如果启用了 JS 安全码，需要在加载前注入 window._AMapSecurityConfig
+  if (amapJsCode) {
+    (window as any)._AMapSecurityConfig = { securityJsCode: amapJsCode };
+  }
   const AMap = await AMapLoader.load({
     key: amapKey,
     version: '2.0',
-    plugins: ['AMap.ToolBar', 'AMap.Scale']
+    plugins: ['AMap.ToolBar', 'AMap.Scale'],
+    // 兼容 loader 新版参数（有些版本也从这里读取）
+    securityJsCode: amapJsCode
   });
   map = new AMap.Map(mapEl.value, { zoom: 11 });
   map.addControl(new AMap.ToolBar());
@@ -68,4 +75,3 @@ onBeforeUnmount(() => { map = null; });
 .map-wrap { width: 100%; height: 360px; }
 .map { width: 100%; height: 100%; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
 </style>
-

@@ -55,3 +55,12 @@ VITE_SUPABASE_ANON_KEY=浣犵殑AnonKey
 ## 甯歌闂锛團AQ锛?- 涓枃涔辩爜锛氭湰浠撳簱鏂囨。浣跨敤 UTF-8锛堝繀瑕佹椂甯?BOM锛夛紝鑻ヤ粛涔辩爜锛岃妫€鏌?IDE 缂栫爜璁剧疆銆?- 鎺ュ彛 404锛氱‘淇濆悗绔凡鍦?8080 绔彛杩愯锛屼笖鍓嶇浣跨敤 `npm run dev` 浠ュ惎鐢ㄤ唬鐞嗐€?
 ## 璐＄尞
 閲囩敤绾﹀畾寮忔彁浜や俊鎭紙濡?`feat: ...`銆乣fix: ...`銆乣docs: ...`锛夈€?
+
+### 地图配置（前端 JS SDK）
+- 前端变量：在 web/.env.local 设置
+  - VITE_AMAP_KEY=你的JS_API_Key`n  - 可选：VITE_AMAP_SECURITY_JSCODE=你的JS安全码（若在高德控制台开启了安全码）
+- 高德控制台 Referer 白名单建议（每行一个 Origin）：
+  - 开发：http://localhost:5173、http://127.0.0.1:5173`n  - 生产：https://yourdomain.com（按需添加子域）
+  - 保存后需等待 5–10 分钟生效
+- 若白名单留空，等同不限来源（不推荐用于生产）。生产环境请开启白名单并启用 JS 安全码。
+
