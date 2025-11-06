@@ -16,13 +16,27 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Autowired;
+import com.ai.travel.service.BailianClient;
+
 @RestController
 @RequestMapping("/api/itineraries")
 public class ItineraryController {
 
+    @Autowired(required = false)
+    private BailianClient bailianClient;
+
     // 最小可行：返回固定结构的示例数据，占位后续接入阿里百炼
     @PostMapping("/generate")
     public ResponseEntity<ItineraryResponse> generate(@Valid @RequestBody GenerateRequest req) {
+        // 若已配置阿里百炼，则调用真实模型；失败或未配置回退到示例
+        if (bailianClient != null && bailianClient.isConfigured()) {
+            try {
+                ItineraryResponse ai = bailianClient.generateItinerary(req);
+                if (ai != null) return ResponseEntity.ok(ai);
+            } catch (Exception ignored) { }
+        }
+
         ItineraryResponse res = new ItineraryResponse();
         res.setItineraryId(UUID.randomUUID().toString());
         res.setDestination(req.getDestination());
@@ -78,4 +92,3 @@ public class ItineraryController {
         return a;
     }
 }
-
