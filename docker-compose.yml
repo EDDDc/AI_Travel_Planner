@@ -1,9 +1,12 @@
-version: '3.9'
 services:
   server:
     build:
       context: ./server
       dockerfile: Dockerfile
+      args:
+        HTTP_PROXY: ${HTTP_PROXY}
+        HTTPS_PROXY: ${HTTPS_PROXY}
+        NO_PROXY: ${NO_PROXY}
     container_name: ai-travel-server
     environment:
       - BAILIAN_API_KEY=${BAILIAN_API_KEY}
@@ -11,6 +14,9 @@ services:
       - XF_API_KEY=${XF_API_KEY}
       - XF_API_SECRET=${XF_API_SECRET}
       - AMAP_KEY=${AMAP_KEY}
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
     ports:
       - "8080:8080"
 
@@ -21,9 +27,17 @@ services:
       args:
         VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
         VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+        VITE_AMAP_KEY: ${VITE_AMAP_KEY}
+        VITE_AMAP_SECURITY_JSCODE: ${VITE_AMAP_SECURITY_JSCODE}
+        HTTP_PROXY: ${HTTP_PROXY}
+        HTTPS_PROXY: ${HTTPS_PROXY}
+        NO_PROXY: ${NO_PROXY}
     container_name: ai-travel-web
+    environment:
+      - HTTP_PROXY=${HTTP_PROXY}
+      - HTTPS_PROXY=${HTTPS_PROXY}
+      - NO_PROXY=${NO_PROXY}
     ports:
       - "5173:80"
     depends_on:
       - server
-
