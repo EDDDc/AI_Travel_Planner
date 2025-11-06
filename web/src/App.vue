@@ -9,6 +9,14 @@
         </el-menu>
       </div>
       <div class="nav-right">
+        <template v-if="!userEmail">
+          <RouterLink class="btn ghost" to="/login">登录</RouterLink>
+          <RouterLink class="btn" to="/register">注册</RouterLink>
+        </template>
+        <template v-else>
+          <el-tag type="success">{{ userEmail }}</el-tag>
+          <el-button @click="signOut">退出</el-button>
+        </template>
         <el-button type="primary" @click="checkHealth">检查后端</el-button>
         <el-tag :type="healthStatus === 'ok' ? 'success' : 'info'" size="large">{{ healthStatus || '未检查' }}</el-tag>
         <span class="now small muted">{{ now }}</span>
@@ -26,13 +34,15 @@
 
 <script setup lang="ts">
 import { onMounted, ref, watch } from 'vue';
-import { RouterView, useRouter, useRoute } from 'vue-router';
+import { RouterLink, RouterView, useRouter, useRoute } from 'vue-router';
+import { supabase } from './lib/supabase';
 
 const healthStatus = ref<string>('');
 const now = ref<string>('');
 const router = useRouter();
 const route = useRoute();
 const active = ref(route.path);
+const userEmail = ref('');
 
 async function checkHealth() {
   try {
@@ -46,12 +56,23 @@ async function checkHealth() {
 
 onMounted(async () => {
   setInterval(() => { now.value = new Date().toLocaleString(); }, 1000);
+  try {
+    const { data } = await supabase.auth.getUser();
+    userEmail.value = data.user?.email || '';
+    supabase.auth.onAuthStateChange((_, session) => {
+      userEmail.value = session?.user?.email || '';
+    });
+  } catch {}
 });
 
 watch(() => route.path, (p) => active.value = p);
 
 function onSelect(path: string) {
   router.push(path);
+}
+
+async function signOut() {
+  try { await supabase.auth.signOut(); } catch {}
 }
 </script>
 
