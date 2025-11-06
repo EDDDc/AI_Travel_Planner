@@ -7,7 +7,7 @@
 
 ## 开发步骤
 - [x] 搭建后端 Spring Boot 脚手架
-- [ ] 搭建前端 Vue3 + Vite 脚手架
+- [x] 搭建前端 Vue3 + Vite 脚手架
 - [ ] 行程生成最小 API（阿里百炼，固定 JSON 输出）
 - [ ] 语音 ASR 最小 API（讯飞，浏览器录音上传）
 - [ ] 高德地点检索代理 API（仅代理查询；前端用 JS SDK 展示标记）
@@ -47,3 +47,4 @@
 - README（环境变量、运行、测试、常见问题）
 - 提交 PDF（含仓库地址与 README 要点）
 - GitHub Actions（可选，最后阶段添加并推送 ACR）
+
