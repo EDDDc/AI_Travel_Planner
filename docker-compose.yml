@@ -1,0 +1,29 @@
+version: '3.9'
+services:
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: ai-travel-server
+    environment:
+      - BAILIAN_API_KEY=${BAILIAN_API_KEY}
+      - XF_APP_ID=${XF_APP_ID}
+      - XF_API_KEY=${XF_API_KEY}
+      - XF_API_SECRET=${XF_API_SECRET}
+      - AMAP_KEY=${AMAP_KEY}
+    ports:
+      - "8080:8080"
+
+  web:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+      args:
+        VITE_SUPABASE_URL: ${VITE_SUPABASE_URL}
+        VITE_SUPABASE_ANON_KEY: ${VITE_SUPABASE_ANON_KEY}
+    container_name: ai-travel-web
+    ports:
+      - "5173:80"
+    depends_on:
+      - server
+

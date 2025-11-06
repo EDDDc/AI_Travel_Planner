@@ -35,6 +35,24 @@ npm run dev
 
 打开浏览器访问 `http://localhost:5173`，点击“检查后端健康”，应显示 `ok`。
 
+## Docker 一键运行
+
+1) 准备环境变量
+   - 复制根目录 `.env.example` 为 `.env`，按需填写：
+     - 服务器端密钥：`BAILIAN_API_KEY`、`XF_APP_ID`、`XF_API_KEY`、`XF_API_SECRET`、`AMAP_KEY`
+     - 前端构建变量：`VITE_SUPABASE_URL`、`VITE_SUPABASE_ANON_KEY`（用于构建 web 静态站点）
+
+2) 构建并启动
+```
+docker compose up --build -d
+```
+   - 前端访问：http://localhost:5173 （Nginx）
+   - 后端健康：http://localhost:8080/api/health
+
+说明
+- Nginx 已将前端 `/api` 代理到后端 `server:8080`。
+- 若未设置密钥，AI/ASR/高德检索将使用占位/本地示例，页面仍可体验基本流程。
+
 ### 接入 Supabase（可选）
 1) 在 Supabase 控制台创建项目，获取 `Project URL` 与 `anon key`。
 2) 前端配置环境变量：复制 `web/.env.example` 为 `web/.env.local` 并填写：
