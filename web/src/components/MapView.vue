@@ -11,13 +11,14 @@
 import { onMounted, onBeforeUnmount, ref, watch } from 'vue';
 import AMapLoader from '@amap/amap-jsapi-loader';
 
-type Pt = { name?: string; lat: number; lng: number };
+type Pt = { name?: string; lat: number; lng: number; info?: string };
 const props = defineProps<{ points: Pt[] }>();
 
 const mapEl = ref<HTMLDivElement | null>(null);
 let map: any = null;
 let markers: any[] = [];
 let polyline: any | null = null;
+let infoWindow: any | null = null;
 
 const amapKey = import.meta.env.VITE_AMAP_KEY as string | undefined;
 const amapJsCode = import.meta.env.VITE_AMAP_SECURITY_JSCODE as string | undefined;
@@ -40,6 +41,7 @@ async function initMap() {
     map = new AMap.Map(mapEl.value, { zoom: 11 });
     map.addControl(new AMap.ToolBar());
     map.addControl(new AMap.Scale());
+    infoWindow = new AMap.InfoWindow({ offset: new AMap.Pixel(0, -24) });
     renderPoints(AMap, props.points);
   } catch (e: any) {
     console.error('[AMap] load failed', e);
@@ -57,6 +59,12 @@ function renderPoints(AMap: any, pts: Pt[]) {
   pts.filter(p => p && typeof p.lat === 'number' && typeof p.lng === 'number')
      .forEach(p => {
        const marker = new AMap.Marker({ position: [p.lng, p.lat], title: p.name || '' });
+       marker.on('click', () => {
+         if (!infoWindow) return;
+         const html = `<div style="min-width:180px"><div style="font-weight:600">${p.name ?? ''}</div><div style="color:#666;margin-top:4px">${p.info ?? ''}</div></div>`;
+         infoWindow.setContent(html);
+         infoWindow.open(map, marker.getPosition());
+       });
        marker.setMap(map);
        markers.push(marker);
        path.push([p.lng, p.lat]);

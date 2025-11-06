@@ -43,6 +43,11 @@
           <template #header><div class="card-header">地图预览（D1）</div></template>
           <div v-if="mapPoints.length === 0" class="small muted">暂无可渲染的地点（生成或补全后显示）</div>
           <MapView v-else :points="mapPoints" />
+          <div v-if="generated?.dayPlans?.length" style="margin-top:8px; display:flex; justify-content:flex-end;">
+            <el-select v-model="selectedDayIndex" size="small" style="width:160px" @change="(i:number)=>buildMapPointsFromDayIndex(i)">
+              <el-option v-for="(d,i) in generated.dayPlans" :key="i" :label="(d.date || `D${i+1}`)" :value="i" />
+            </el-select>
+          </div>
         </el-card>
       </el-col>
       <el-col :xs="24" :md="10">
@@ -132,7 +137,11 @@ async function generateItinerary() {
       body: JSON.stringify({ ...gen.value, preferences: ['美食', '亲子'] }),
     });
     generated.value = await res.json();
+    // 默认展示 D1
+    // 保留旧函数调用，随后按选择的日程重建点位
     await buildMapPoints();
+    selectedDayIndex.value = 0;
+    await buildMapPointsFromDayIndex(0);
   } catch (e) {
     saveMsg.value = '生成失败';
   } finally {
@@ -238,6 +247,35 @@ async function loadBudgetSummary(itineraryId: string) {
   if (error) { budgetSummary.value = null; return; }
   const total = (data || []).reduce((sum: number, row: any) => sum + Number(row.amount || 0), 0);
   budgetSummary.value = { count: data?.length || 0, total };
+}
+
+// 根据选择的日程重建地图点位
+async function buildMapPointsFromDayIndex(i: number) {
+  try {
+    selectedDayIndex.value = i ?? 0;
+    // 复制生成逻辑，按所选日提取活动
+    const day = generated.value?.dayPlans?.[selectedDayIndex.value];
+    const pts: { name?: string; lat: number; lng: number; info?: string }[] = [];
+    if (day?.activities?.length) {
+      for (const a of day.activities as any[]) {
+        const info = [a.start && a.end ? `${a.start} - ${a.end}` : '', a.notes || ''].filter(Boolean).join(' · ');
+        if (typeof a.lat === 'number' && typeof a.lng === 'number') {
+          pts.push({ name: a.name, lat: a.lat, lng: a.lng, info });
+        } else if (a.name) {
+          try {
+            const res = await fetch('/api/places/search?q=' + encodeURIComponent(a.name));
+            const data = await res.json();
+            const first = data.items?.[0];
+            if (first && typeof first.lat === 'number' && typeof first.lng === 'number') {
+              pts.push({ name: a.name, lat: first.lat, lng: first.lng, info });
+            }
+          } catch {}
+        }
+        if (pts.length >= 12) break;
+      }
+    }
+    mapPoints.value = pts;
+  } catch {}
 }
 </script>
 
