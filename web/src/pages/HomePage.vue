@@ -1,63 +1,79 @@
 <template>
   <section>
-    <section class="next card">
-      <h2>接下来要做</h2>
-      <ul class="bullet-list">
-        <li>行程生成最小 API 对接</li>
-        <li>语音 ASR 最小 API 对接</li>
-        <li>高德地图展示与检索</li>
-      </ul>
-    </section>
-
-    <section class="itinerary card">
-      <h2>行程生成与保存（演示）</h2>
-      <div class="gen-form grid">
-        <input class="input" v-model="gen.destination" placeholder="目的地" />
-        <input class="input" v-model.number="gen.days" type="number" min="1" placeholder="天数" />
-        <input class="input" v-model.number="gen.people" type="number" min="1" placeholder="人数" />
-        <input class="input" v-model.number="gen.budget" type="number" min="0" placeholder="预算（可选）" />
-        <button class="btn" @click="generateItinerary">生成行程</button>
-      </div>
-      <div v-if="genLoading" class="small"><span class="spinner"></span> 生成中...</div>
-      <div v-if="generated" class="gen-result">
-        <div class="summary">目的地：{{ generated.destination }}｜天数：{{ generated.days }}｜方案ID：{{ generated.itineraryId }}</div>
-        <button class="btn" :disabled="!canSave" @click="saveItinerary">保存到云端</button>
-        <div class="small">{{ saveMsg }}</div>
-        <pre>{{ JSON.stringify(generated, null, 2) }}</pre>
-      </div>
-
-      <div class="list">
-        <h3>我的行程</h3>
-        <div v-if="!supabaseReady">需配置 Supabase 才能列出</div>
-        <div v-else-if="!userEmail">需登录后查看（前往“个人中心”登录）</div>
-        <ul v-else>
-          <li v-for="it in myItineraries" :key="it.id">
-            <div>
-              <strong>{{ it.title || (it.destination + '·' + (it.days || '')) }}</strong>
-              <span class="muted">（{{ it.destination }}）</span>
-            </div>
-            <div>
-              <button class="btn ghost" @click="removeItinerary(it.id)">删除</button>
-            </div>
-          </li>
-        </ul>
-        <button v-if="supabaseReady && userEmail" class="btn ghost" @click="loadItineraries">刷新</button>
-
-        <div v-if="supabaseReady && userEmail" class="budget">
-          <h4>记一笔预算</h4>
-          <select class="input" v-model="selectedItineraryId" @change="loadBudgetSummary(selectedItineraryId)">
-            <option value="" disabled>选择行程</option>
-            <option v-for="it in myItineraries" :key="it.id" :value="it.id">{{ it.title || it.destination }}</option>
-          </select>
-          <input class="input" v-model.number="beAmount" type="number" min="0" placeholder="金额" />
-          <input class="input" v-model="beCategory" placeholder="类别(如 food)" />
-          <input class="input" v-model="beNote" placeholder="备注(可选)" />
-          <button class="btn" @click="addBudgetEntry">新增</button>
-          <span class="small">{{ budgetMsg }}</span>
-          <div v-if="budgetSummary" class="small">当前行程：{{ budgetSummary.count }} 笔，共计 {{ budgetSummary.total }}</div>
+    <el-card class="hero" shadow="hover" body-style="padding: 18px 18px">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap">
+        <div>
+          <h2 style="margin:0 0 6px">快速生成你的专属行程</h2>
+          <div class="muted">输入目的地与天数，马上得到可执行方案。</div>
+        </div>
+        <div class="section-actions">
+          <el-button type="primary" @click="generateItinerary" :loading="genLoading">一键生成</el-button>
         </div>
       </div>
-    </section>
+    </el-card>
+
+    <el-card class="card" shadow="hover">
+      <template #header>
+        <div class="card-header">行程参数</div>
+      </template>
+      <el-form label-width="80">
+        <el-row :gutter="12">
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="目的地"><el-input v-model="gen.destination" placeholder="如 东京" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="天数"><el-input-number v-model="gen.days" :min="1" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="人数"><el-input-number v-model="gen.people" :min="1" /></el-form-item></el-col>
+          <el-col :xs="24" :sm="12" :md="6"><el-form-item label="预算"><el-input-number v-model="gen.budget" :min="0" /></el-form-item></el-col>
+        </el-row>
+        <el-button type="primary" @click="generateItinerary" :loading="genLoading">生成行程</el-button>
+      </el-form>
+    </el-card>
+
+    <el-row :gutter="16" style="margin-top:12px">
+      <el-col :xs="24" :md="14">
+        <el-card shadow="hover">
+          <template #header><div class="card-header">生成结果</div></template>
+          <div v-if="!generated" class="small muted">尚未生成</div>
+          <div v-else>
+            <div class="summary">目的地：{{ generated.destination }}｜天数：{{ generated.days }}｜方案ID：{{ generated.itineraryId }}</div>
+            <el-button type="success" :disabled="!canSave" @click="saveItinerary">保存到云端</el-button>
+            <span class="small" style="margin-left:8px">{{ saveMsg }}</span>
+            <pre style="margin-top:8px">{{ JSON.stringify(generated, null, 2) }}</pre>
+          </div>
+        </el-card>
+      </el-col>
+      <el-col :xs="24" :md="10">
+        <el-card shadow="hover">
+          <template #header><div class="card-header">我的行程</div></template>
+          <div v-if="!supabaseReady">需配置 Supabase 才能列出</div>
+          <div v-else-if="!userEmail">需登录后查看（前往“个人中心”登录）</div>
+          <el-table v-else :data="myItineraries" size="small" style="width:100%">
+            <el-table-column label="标题" :min-width="200" v-slot="scope">
+              <div><strong>{{ scope.row.title || (scope.row.destination + '·' + (scope.row.days || '')) }}</strong></div>
+              <div class="small muted">{{ scope.row.destination }}</div>
+            </el-table-column>
+            <el-table-column label="操作" width="120" v-slot="scope">
+              <el-button link type="danger" @click="removeItinerary(scope.row.id)">删除</el-button>
+            </el-table-column>
+          </el-table>
+          <div style="margin-top:8px"><el-button v-if="supabaseReady && userEmail" size="small" @click="loadItineraries">刷新</el-button></div>
+        </el-card>
+
+        <el-card shadow="hover" style="margin-top:12px">
+          <template #header><div class="card-header">记一笔预算</div></template>
+          <div v-if="!(supabaseReady && userEmail)" class="small muted">登录后使用</div>
+          <div v-else class="grid">
+            <el-select v-model="selectedItineraryId" placeholder="选择行程" @change="loadBudgetSummary(selectedItineraryId)">
+              <el-option v-for="it in myItineraries" :key="it.id" :label="it.title || it.destination" :value="it.id" />
+            </el-select>
+            <el-input-number v-model="beAmount" :min="0" />
+            <el-input v-model="beCategory" placeholder="类别(如 food)" />
+            <el-input v-model="beNote" placeholder="备注(可选)" />
+            <el-button type="primary" @click="addBudgetEntry">新增</el-button>
+            <div class="small">{{ budgetMsg }}</div>
+            <div v-if="budgetSummary" class="small">当前行程：{{ budgetSummary.count }} 笔，共计 {{ budgetSummary.total }}</div>
+          </div>
+        </el-card>
+      </el-col>
+    </el-row>
 
     <section class="card">
       <h2>快速提示</h2>
@@ -193,4 +209,3 @@ async function loadBudgetSummary(itineraryId: string) {
 <style scoped>
 .itinerary { margin-top: 8px; }
 </style>
-

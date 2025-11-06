@@ -1,36 +1,38 @@
 <template>
-  <main class="container">
-    <header class="header">
-      <div>
-        <h1 class="title">AI 旅行规划师（Web）</h1>
-        <p class="subtitle">快速生成行程、轻松记账、地图查看。</p>
+  <el-container>
+    <el-header height="64px" class="nav-wrap">
+      <div class="nav-left">
+        <div class="brand">AI Travel Planner</div>
+        <el-menu mode="horizontal" :default-active="active" @select="onSelect" class="nav-menu" router>
+          <el-menu-item index="/">首页</el-menu-item>
+          <el-menu-item index="/profile">个人中心</el-menu-item>
+        </el-menu>
       </div>
-      <div class="section-actions">
-        <button class="btn" @click="checkHealth">检查后端健康</button>
-        <span class="status" :data-ok="healthStatus === 'ok'">{{ healthStatus ? ('状态：' + healthStatus) : '状态：未检查' }}</span>
+      <div class="nav-right">
+        <el-button type="primary" @click="checkHealth">检查后端</el-button>
+        <el-tag :type="healthStatus === 'ok' ? 'success' : 'info'" size="large">{{ healthStatus || '未检查' }}</el-tag>
+        <span class="now small muted">{{ now }}</span>
       </div>
-    </header>
+    </el-header>
 
-    <nav class="card" style="display:flex;align-items:center;justify-content:space-between;gap:12px;">
-      <div class="section-actions" style="gap:16px">
-        <RouterLink class="btn ghost" to="/">首页</RouterLink>
-        <RouterLink class="btn ghost" to="/profile">个人中心</RouterLink>
+    <el-main>
+      <div class="container">
+        <RouterView />
+        <div class="footer">© AI Travel Planner · 仅用于课程与演示用途</div>
       </div>
-      <div class="small muted">{{ now }}</div>
-    </nav>
-
-    <RouterView />
-
-    <div class="footer">© AI Travel Planner · 仅用于课程与演示用途</div>
-  </main>
+    </el-main>
+  </el-container>
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
-import { RouterLink, RouterView } from 'vue-router';
+import { onMounted, ref, watch } from 'vue';
+import { RouterView, useRouter, useRoute } from 'vue-router';
 
 const healthStatus = ref<string>('');
 const now = ref<string>('');
+const router = useRouter();
+const route = useRoute();
+const active = ref(route.path);
 
 async function checkHealth() {
   try {
@@ -45,11 +47,20 @@ async function checkHealth() {
 onMounted(async () => {
   setInterval(() => { now.value = new Date().toLocaleString(); }, 1000);
 });
+
+watch(() => route.path, (p) => active.value = p);
+
+function onSelect(path: string) {
+  router.push(path);
+}
 </script>
 
 <style scoped>
-.auth { margin-top: 8px; }
-.next { margin-top: 8px; }
-.itinerary { margin-top: 8px; }
-.login { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.nav-wrap { display: flex; align-items: center; justify-content: space-between; background: #fff; border-bottom: 1px solid var(--border); }
+.nav-left { display: flex; align-items: center; gap: 16px; }
+.brand { font-weight: 800; letter-spacing: .2px; }
+.nav-menu { border-bottom: none; }
+.nav-right { display: flex; align-items: center; gap: 12px; }
+.container { max-width: 1100px; margin: 20px auto 48px; padding: 0 20px; }
+.now { margin-left: 8px; }
 </style>
