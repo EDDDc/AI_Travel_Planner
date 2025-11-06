@@ -1,8 +1,10 @@
 <template>
   <div class="map-wrap">
     <div v-if="!amapKey" class="small muted">未配置 VITE_AMAP_KEY，无法加载地图</div>
+    <div v-else-if="err" class="small hint">{{ err }}</div>
     <div v-else ref="mapEl" class="map"></div>
   </div>
+  
 </template>
 
 <script setup lang="ts">
@@ -19,24 +21,31 @@ let polyline: any | null = null;
 
 const amapKey = import.meta.env.VITE_AMAP_KEY as string | undefined;
 const amapJsCode = import.meta.env.VITE_AMAP_SECURITY_JSCODE as string | undefined;
+const err = ref('');
 
 async function initMap() {
   if (!amapKey || !mapEl.value) return;
-  // 如果启用了 JS 安全码，需要在加载前注入 window._AMapSecurityConfig
-  if (amapJsCode) {
-    (window as any)._AMapSecurityConfig = { securityJsCode: amapJsCode };
+  try {
+    // 如果启用了 JS 安全码，需要在加载前注入 window._AMapSecurityConfig
+    if (amapJsCode) {
+      (window as any)._AMapSecurityConfig = { securityJsCode: amapJsCode };
+    }
+    const AMap = await AMapLoader.load({
+      key: amapKey,
+      version: '2.0',
+      plugins: ['AMap.ToolBar', 'AMap.Scale'],
+      // 兼容 loader 新版参数（有些版本也从这里读取）
+      securityJsCode: amapJsCode
+    });
+    map = new AMap.Map(mapEl.value, { zoom: 11 });
+    map.addControl(new AMap.ToolBar());
+    map.addControl(new AMap.Scale());
+    renderPoints(AMap, props.points);
+  } catch (e: any) {
+    console.error('[AMap] load failed', e);
+    const msg = (e && (e.message || e.toString())) || '未知错误';
+    err.value = `加载高德地图失败：${msg}。请检查 VITE_AMAP_KEY、Referer 白名单与安全码配置。`;
   }
-  const AMap = await AMapLoader.load({
-    key: amapKey,
-    version: '2.0',
-    plugins: ['AMap.ToolBar', 'AMap.Scale'],
-    // 兼容 loader 新版参数（有些版本也从这里读取）
-    securityJsCode: amapJsCode
-  });
-  map = new AMap.Map(mapEl.value, { zoom: 11 });
-  map.addControl(new AMap.ToolBar());
-  map.addControl(new AMap.Scale());
-  renderPoints(AMap, props.points);
 }
 
 function renderPoints(AMap: any, pts: Pt[]) {
