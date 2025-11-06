@@ -33,7 +33,11 @@ public class ItineraryController {
         if (bailianClient != null && bailianClient.isConfigured()) {
             try {
                 ItineraryResponse ai = bailianClient.generateItinerary(req);
-                if (ai != null) return ResponseEntity.ok(ai);
+                if (ai != null) {
+                    return ResponseEntity.ok()
+                            .header("X-AI-Source", "bailian")
+                            .body(ai);
+                }
             } catch (Exception ignored) { }
         }
 
@@ -76,7 +80,9 @@ public class ItineraryController {
         be.setOther(base - be.getTransport() - be.getLodging() - be.getFood() - be.getTicket());
         res.setBudgetEstimate(be);
 
-        return ResponseEntity.ok(res);
+        return ResponseEntity.ok()
+                .header("X-AI-Source", "stub")
+                .body(res);
     }
 
     private Activity activity(String type, String name, Double lat, Double lng,
