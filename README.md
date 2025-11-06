@@ -35,6 +35,16 @@ npm run dev
 
 打开浏览器访问 `http://localhost:5173`，点击“检查后端健康”，应显示 `ok`。
 
+### 接入 Supabase（可选）
+1) 在 Supabase 控制台创建项目，获取 `Project URL` 与 `anon key`。
+2) 前端配置环境变量：复制 `web/.env.example` 为 `web/.env.local` 并填写：
+```
+VITE_SUPABASE_URL=你的ProjectURL
+VITE_SUPABASE_ANON_KEY=你的AnonKey
+```
+3) 前端重启 `npm run dev`，页面“账户”区域可注册/登录（邮箱/密码）。
+4) 数据表与 RLS：将 `docs/supabase_schema.sql` 在 Supabase SQL 编辑器执行。
+
 ## 环境变量（占位）
 为避免在代码中硬编码密钥，以下值通过环境注入：
 - `BAILIAN_API_KEY` — 阿里云百炼（行程与预算生成）
@@ -54,4 +64,3 @@ npm run dev
 
 ## 贡献
 采用约定式提交信息（如 `feat: ...`、`fix: ...`、`docs: ...`）。
-

@@ -6,6 +6,26 @@
       <span class="status" :data-ok="healthStatus === 'ok'">状态：{{ healthStatus || '未检查' }}</span>
     </section>
 
+    <section class="auth">
+      <h2>账户（Supabase Auth）</h2>
+      <div v-if="!supabaseReady" class="hint">未配置 Supabase（请在 web/.env.local 中设置 VITE_SUPABASE_URL 与 VITE_SUPABASE_ANON_KEY）</div>
+      <div v-else>
+        <div v-if="userEmail; else loginForm">
+          <div>已登录：{{ userEmail }}</div>
+          <button @click="signOut">退出登录</button>
+        </div>
+        <template #loginForm>
+          <div class="login">
+            <input v-model="email" type="email" placeholder="邮箱" />
+            <input v-model="password" type="password" placeholder="密码" />
+            <button @click="signIn">登录</button>
+            <button @click="signUp" class="ghost">注册</button>
+            <span class="auth-msg">{{ authMsg }}</span>
+          </div>
+        </template>
+      </div>
+    </section>
+
     <section class="next">
       <h2>接下来要做</h2>
       <ul>
@@ -18,9 +38,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { onMounted, ref } from 'vue';
+import { supabase, hasSupabaseConfig } from './lib/supabase';
 
 const healthStatus = ref<string>('');
+const supabaseReady = hasSupabaseConfig;
+const userEmail = ref<string>('');
+const email = ref('');
+const password = ref('');
+const authMsg = ref('');
 
 async function checkHealth() {
   try {
@@ -30,6 +56,34 @@ async function checkHealth() {
   } catch (e) {
     healthStatus.value = 'error';
   }
+}
+
+onMounted(async () => {
+  if (!supabaseReady) return;
+  const { data } = await supabase.auth.getUser();
+  userEmail.value = data.user?.email || '';
+  supabase.auth.onAuthStateChange((event, session) => {
+    userEmail.value = session?.user?.email || '';
+  });
+});
+
+async function signIn() {
+  if (!supabaseReady) return;
+  authMsg.value = '';
+  const { error } = await supabase.auth.signInWithPassword({ email: email.value, password: password.value });
+  authMsg.value = error ? error.message : '登录成功';
+}
+
+async function signUp() {
+  if (!supabaseReady) return;
+  authMsg.value = '';
+  const { error } = await supabase.auth.signUp({ email: email.value, password: password.value });
+  authMsg.value = error ? error.message : '注册成功，请查收验证邮件';
+}
+
+async function signOut() {
+  if (!supabaseReady) return;
+  await supabase.auth.signOut();
 }
 </script>
 
@@ -41,5 +95,10 @@ button { padding: 8px 12px; cursor: pointer; }
 .status[data-ok="false"] { color: #9c27b0; }
 h1 { margin-bottom: 12px; }
 .next { margin-top: 24px; }
+.auth { margin-top: 24px; }
+.login { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+input { padding: 8px; border: 1px solid #ccc; border-radius: 4px; }
+.ghost { background: #fff; border: 1px solid #999; }
+.auth-msg { margin-left: 8px; color: #555; }
+.hint { color: #b26a00; }
 </style>
-

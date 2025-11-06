@@ -11,7 +11,7 @@
 - [x] 行程生成最小 API（阿里百炼，固定 JSON 输出）
 - [x] 语音 ASR 最小 API（讯飞，浏览器录音上传）
 - [x] 高德地点检索代理 API（仅代理查询；前端用 JS SDK 展示标记）
-- [ ] 接入 Supabase Auth（前端登录）与最小数据表（行程/活动/记账）
+ - [x] 接入 Supabase Auth（前端登录）与最小数据表（行程/活动/记账）
 - [ ] 行程与预算 CRUD（前端直连 Supabase，RLS 仅本人可见）
 - [ ] 前端 MVP：创建向导（文本/语音）→ 生成行程 → 地图与列表展示 → 语音记账
 - [ ] Docker 化与本地一键运行（docker-compose 前后端+Nginx）
